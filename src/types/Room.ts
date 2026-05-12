@@ -1,6 +1,6 @@
 export interface TimeSlot {
-  id: string;          // Например, "10:00"
-  timeLabel: string;   // Например, "10:00 - 12:00"
+  id: string;
+  timeLabel: string;
   isBooked: boolean;
   clientName?: string;
 }
@@ -12,4 +12,7 @@ export interface Room {
   area: number;
   equipment: string[];
   schedule: TimeSlot[];
+  imageUrl?: string;
+  description?: string; // НОВОЕ: Описание зала
+  gallery?: string[];   // НОВОЕ: Дополнительные фото
 }
