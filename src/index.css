@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
+
 html, body, #root {
   margin: 0;
   padding: 0;
@@ -7,13 +9,43 @@ html, body, #root {
 
 * {
   box-sizing: border-box;
+  font-family: 'Montserrat', sans-serif;
 }
 
 body {
-  background-color: #f0f2f5;
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #0a0a0a; /* Глубокий черный фон */
+  color: #ffffff; /* Белый текст по умолчанию */
 }
 
-#root {
-  max-width: 100% !important;
+/* --- НЕОНОВЫЕ АНИМАЦИИ --- */
+
+.room-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.room-card:hover {
+  transform: translateY(-8px);
+  /* Кибер-свечение при наведении */
+  box-shadow: 0 15px 35px rgba(0, 229, 255, 0.15) !important; 
+}
+
+.time-slot {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.time-slot:hover:not(:disabled) {
+  transform: scale(1.05);
+  filter: brightness(1.2);
+  /* Свечение свободной кнопки */
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.4); 
+}
+
+.search-input {
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(138, 43, 226, 0.3) !important; /* Фиолетовое свечение поиска */
+  border: 1px solid #8a2be2 !important;
 }

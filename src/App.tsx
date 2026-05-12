@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import RoomCard from './components/RoomCard';
-import AddRoomForm from './components/AddRoomForm';
 import BookingModal from './components/BookingModal';
-import EditRoomModal from './components/EditRoomModal';
-import BookingsList from './components/BookingsList';
 import type { Room, TimeSlot } from './types/Room';
 
 const defaultSchedule: TimeSlot[] = [
@@ -15,60 +12,58 @@ const defaultSchedule: TimeSlot[] = [
   { id: "20:00", timeLabel: "20:00 - 22:00", isBooked: false },
 ];
 
+// Убрали все хардкодные бронирования. Теперь при map() мы просто копируем чистый шаблон.
+const initialRooms: Room[] = [
+  { id: 1, name: "Premium Зал 'Неон'", pricePerHour: 1500, area: 40, equipment: ["Барабаны DW", "Усилители Orange", "Микрофоны Shure SM58"], schedule: defaultSchedule.map(s => ({...s})) },
+  { id: 2, name: "Акустическая студия", pricePerHour: 800, area: 20, equipment: ["Пианино Yamaha", "Комбоусилитель Fender", "Стойки"], schedule: defaultSchedule.map(s => ({...s})) },
+  { id: 3, name: "Базовый цех", pricePerHour: 600, area: 25, equipment: ["Барабаны Tama", "Бас-комбик Ampeg"], schedule: defaultSchedule.map(s => ({...s})) },
+];
+
 const loadData = () => {
-  const savedData = localStorage.getItem('crm_rooms');
-  return savedData ? JSON.parse(savedData) : [
-    { id: 1, name: "Красная комната", pricePerHour: 1000, area: 30, equipment: ["Барабаны Tama"], schedule: defaultSchedule.map(s => ({...s})) }
-  ];
+  // ИЗМЕНЕНИЕ КЛЮЧА: Чтобы сбросить старую память браузера с занятыми часами
+  const savedData = localStorage.getItem('client_booking_rooms_clean');
+  return savedData ? JSON.parse(savedData) : initialRooms;
 };
 
 function App() {
   const [rooms, setRooms] = useState<Room[]>(loadData);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Состояния для модалок
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeBooking, setActiveBooking] = useState<{ roomId: number, slotId: string } | null>(null);
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [roomToEdit, setRoomToEdit] = useState<Room | null>(null);
-
   useEffect(() => {
-    localStorage.setItem('crm_rooms', JSON.stringify(rooms));
+    // Сохраняем по новому чистому ключу
+    localStorage.setItem('client_booking_rooms_clean', JSON.stringify(rooms));
   }, [rooms]);
 
-  const handleAddRoom = (name: string, price: number, equipment: string[]) => {
-    const newRoom: Room = {
-      id: Date.now(), name, pricePerHour: price, area: 15, equipment,
-      schedule: defaultSchedule.map(slot => ({ ...slot, isBooked: false }))
-    };
-    setRooms([...rooms, newRoom]);
-  };
-
-  const handleDeleteRoom = (id: number) => {
-    if (window.confirm('Удалить этот зал?')) {
-      setRooms(rooms.filter(r => r.id !== id));
-    }
-  };
-
-  // ФУНКЦИЯ ОБНОВЛЕНИЯ ЗАЛА
-  const handleUpdateRoom = (id: number, updatedData: Partial<Room>) => {
-    setRooms(rooms.map(room => room.id === id ? { ...room, ...updatedData } : room));
-  };
-
   const handleSlotClick = (roomId: number, slotId: string) => {
-    const room = rooms.find(r => r.id === roomId);
-    const slot = room?.schedule.find(s => s.id === slotId);
-    if (!slot) return;
+    setActiveBooking({ roomId, slotId });
+    setIsModalOpen(true);
+  };
 
-    if (!slot.isBooked) {
-      setActiveBooking({ roomId, slotId });
-      setIsBookingModalOpen(true);
-    } else {
-      setRooms(rooms.map(r => r.id === roomId ? {
-        ...r, schedule: r.schedule.map(s => s.id === slotId ? { ...s, isBooked: false, clientName: undefined } : s)
-      } : r));
-    }
+  const handleConfirmBooking = (clientName: string, phone: string) => {
+    if (!activeBooking) return;
+    const { roomId, slotId } = activeBooking;
+
+    const updatedRooms = rooms.map(room => {
+      if (room.id === roomId) {
+        const updatedSchedule = room.schedule.map(slot => {
+          if (slot.id === slotId) {
+            return { ...slot, isBooked: true, clientName: `${clientName} (${phone})` };
+          }
+          return slot;
+        });
+        return { ...room, schedule: updatedSchedule };
+      }
+      return room;
+    });
+
+    setRooms(updatedRooms);
+    setIsModalOpen(false);
+    setActiveBooking(null);
+    
+    alert(`Спасибо, ${clientName}! Зал успешно забронирован.`);
   };
 
   const filteredRooms = rooms.filter(room => 
@@ -77,52 +72,55 @@ function App() {
   );
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#f0f2f5', minHeight: '100vh' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '30px' }}>CRM Репетиционной Базы</h1>
+    <div style={{ minHeight: '100vh', width: '100%' }}>
+      
+      {/* Темный HEADER */}
+      <header style={{ 
+        background: 'linear-gradient(180deg, #0a0a0a 0%, rgba(10,10,10,0) 100%)', 
+        padding: '60px 20px 40px 20px', 
+        textAlign: 'center', 
+        marginBottom: '20px'
+      }}>
+        <h1 style={{ margin: '0 0 15px 0', fontSize: '56px', fontWeight: '900', letterSpacing: '-2px', textTransform: 'uppercase', color: '#fff', textShadow: '0 0 20px rgba(0, 229, 255, 0.4)' }}>
+          РепБаза <span style={{ color: '#00e5ff' }}>ЗВУК</span>
+        </h1>
+        <p style={{ margin: 0, fontSize: '18px', color: '#888', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+          Бронируй лучшие репетиционные залы онлайн. Выбирай время, забирай звук.
+        </p>
+      </header>
 
-      {/* Дашборд и Список броней */}
-      <div style={{ maxWidth: '800px', margin: '0 auto 30px auto' }}>
-        <BookingsList rooms={rooms} />
-        <AddRoomForm onAddRoom={handleAddRoom} />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '30px' }}>
-        <input 
-          type="text" placeholder="Поиск по залам..." value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ padding: '12px 20px', borderRadius: '30px', border: '1px solid #ccd0d5', width: '400px', outline: 'none' }}
-        />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '25px' }}>
-        {filteredRooms.map(room => (
-          <RoomCard 
-            key={room.id} room={room} 
-            onToggleSlot={handleSlotClick} 
-            onDelete={handleDeleteRoom}
-            onEdit={(r) => { setRoomToEdit(r); setIsEditModalOpen(true); }} 
+      <div style={{ padding: '0 30px', maxWidth: '1200px', margin: '0 auto' }}>
+        
+        {/* Поиск */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '50px' }}>
+          <input 
+            className="search-input"
+            type="text" placeholder="🔍 Найти по залу или инструменту..." 
+            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ 
+              padding: '16px 24px', borderRadius: '30px', border: '1px solid #333', 
+              width: '100%', maxWidth: '600px', outline: 'none', 
+              backgroundColor: '#121212', color: '#fff', fontSize: '16px' 
+            }}
           />
-        ))}
+        </div>
+
+        {/* Сетка залов */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '30px', paddingBottom: '80px' }}>
+          {filteredRooms.map(room => (
+            <RoomCard 
+              key={room.id} 
+              room={room} 
+              onToggleSlot={handleSlotClick} 
+            />
+          ))}
+        </div>
       </div>
 
       <BookingModal 
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        onConfirm={(name) => {
-          if (activeBooking) {
-            setRooms(rooms.map(r => r.id === activeBooking.roomId ? {
-              ...r, schedule: r.schedule.map(s => s.id === activeBooking.slotId ? { ...s, isBooked: true, clientName: name } : s)
-            } : r));
-          }
-          setIsBookingModalOpen(false);
-        }}
-      />
-
-      <EditRoomModal 
-        isOpen={isEditModalOpen}
-        room={roomToEdit}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleUpdateRoom}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmBooking}
       />
     </div>
   );
